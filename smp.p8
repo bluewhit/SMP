@@ -5,7 +5,9 @@ __lua__
 -- whitney 
 
 t = true
-f = false 
+f = false
+ 
+show = f
 
 rx = 15 
 ry = 15
@@ -28,13 +30,14 @@ function _init()
 	
 	show = f
 	diag = ""
-	d_tick = 0
-	input = f 
+	d_tick = 0 
 	
 	plr = {
 		pnme = "",
 		x=8,
 		y=8,
+		w=8,
+		h=8,
 		
 		moving = f,
 		
@@ -57,6 +60,7 @@ end
 
 -->8
 -- gen
+pr = f 
 
 function spawn() 
 	
@@ -149,7 +153,7 @@ function gen_room()
 				temp.x = i
 				temp.y = j
 				temp.s = rand_elm
-				temp.need_path = f
+				temp.path = f
 				 
 				mset(i,j,temp.s)
 				
@@ -158,7 +162,7 @@ function gen_room()
 					temp.x = i 
 					temp.y = j 
 					temp.s = rm.goals[cgoal]
-					temp.need_path = t 
+					temp.path = t 
 					cgoal += 1
 				
 				mset(i,j,temp.s) 
@@ -167,83 +171,105 @@ function gen_room()
 				temp.x = i
 				temp.y = j
 				temp.s = rm.exits[cexit]
-				temp.need_path = f 
+				temp.path = t
 				cexit += 1
 				
 				mset(i,j,temp.s) 
 		end 
 		
-		add(rm.tiles, temp)
+		add(rm.tiles,temp)
 		
 		end 
 	end  
 	
-	lim = #rm.goals + #rm.exits
-	
---	findpaths(rm.px,rm.py,lim)	
+	for i in all(rm.tiles) do
+ 	if i.path then
+ 	 if not findpath(i.x, i.y) then 
+ 	 	gen_room()
+ 	 end  
+  end
+ end
 	
 end
 
-function findpaths(x,y,lim,ac,at)  
-	
-	-- basically i want to get from the players
-	-- spawn to the exit and goals. this will
-	-- make a path that i can then carve out from tiles
-	
-	--paths is a table that stores a path table
-	--each path will lead from the spawn to the extis, and goals 
+
+v = {} 
+q = {} 
  
-	local targets = {} -- list od coordinates {x}{y} as result of this function
-	local visited = {}
-
-	local stack = {}
-	local read = 0
-	local write = 0
-	write=write + 1  stack[write] = {x,y} -- push
-	visited[x..","..y] = true
-	local dir={{x=-1,y=0},{x=1,y=0},{x=0,y=-1},{x=0,y=1} }
+-- doesnt work and needs condensing     
+function findpath(i,j)
 	
-	while write > read do 
+	--source 
+	s = {x=i,y=j}
+	q = {s} 
 	
-		read = read + 1 
-		local coord = stack[read]
+	p = {}
+
+	
+	for s in all(q) do 
 		
-		local vx = coord[1]
-		local vy = coord[2]
-		
-		--position match
-		if accept_target(vx,vy) then 
-			add(targets,{x=vx, y=vy })
-			if #targets==limit then
-				return targets
+		if s.x != 1 and s.y != 1 then 
+				--x+1, y 
+			if not fget(mget(s.x+1,s.y),0) then
+				add(q,{x=s.x+1,y=s.y})
+			end 
+				
+			--x-1, y 
+			if not fget(mget(s.x-1,s.y),0) then 
+				add(q,{x=s.x-1,y=s.y})
 			end
-		end
-
-		-- go visit neighboars
-		for d in all(dir) do
-
-			-- child position
-			local cx = (vx+d.x)%48 -- map wrap
-			local cy = (vy+d.y)%48
-			if not visited[cx..","..cy] then
-				visited[cx..","..cy]=true
-				if accept_child(cx,cy) then
-					write=write + 1  stack[write] = { cx, cy } -- push
-				end
+				
+				--x-1,y+1
+			if not fget(mget(s.x,s.y+1),0) then
+				add(q,{x=s.x-1,y=s.y+1})
+			end 
+				
+				--x+1,y-1
+			if not fget(mget(s.x,s.y+1),0) then
+				add(q,{x=s.x+1,y=s.y-1})
+			end 
+				
+			--x,y+1
+			if not fget(mget(s.x,s.y+1),0) then
+				add(q,{x=s.x,y=s.y+1})
+			end 
+				
+			--x, y -1 
+			if not fget(mget(s.x,s.y-1),0) then 
+				add(q,{x=s.x,y=s.y-1})
 			end
-		end
-	end
+				
+			--x-1,y-1
+			if not fget(mget(s.x-1,s.y-1),0) then 
+				add(q, {x=s.x-1,y=s.y-1})
+			end
+				  
+			--x+1, y+1 
+			if not fget(mget(s.x+1,s.y+1),0) then
+				add(q,{x=s.x+1,y=s.y+1})
+			end
+				
+			--deletes the node  
+			del(q,s)
+			
+		else
+			-- path exists
+			r = t
+			break
+			
+		end-- if
+		  
+	end --end for
+ 
+	return r
+	  
+end 
 
-	return targets
-end
-	 	
 -->8
 -- collision
 map_tile=0
 flag_tile=0
  
-
-
 function getitem(item)
 		
 		d = "picked up a"
@@ -268,7 +294,7 @@ function getitem(item)
 		
 		if #plr.inven < 8 then 
 		
-			add(inven, o)
+			add(plr.inven, o)
 		
 			for i in all(rm.tiles) do 
 				if i.x == grid_x and i.y == grid_y then
@@ -282,16 +308,36 @@ function getitem(item)
 		end  		
 end 
 
+--collision 
+function collide_map(obj,flag)
+	
+	local x=obj.x local y=obj.y
+	local w=obj.w local h=obj.h
+	
+	local x1=x local y1=y
+	local x2=x+w-1 local y2=y+h-1
+	
+	x1/=8  x2/=8
+	y1/=8  y2/=8
+	
+	if fget(mget(x1,y1),flag)
+	or fget(mget(x1,y2),flag)
+	or fget(mget(x2,y1),flag)
+	or fget(mget(x2,y2),flag) then
+		return true
+	else
+		return false
+	end
 
+end
 -->8
--- dialoge 
-
-show = f 
+-- dialoge -- animations  
+ 
 function trigger()
 	
 	if fget(map_tile,1) then 
 		getitem(map_tile)
-	elseif fget(map_tile) then
+	elseif fget(map_tile,2) then
 		print("trigger")
 	end  
 	 
@@ -303,8 +349,8 @@ function draw_dia()
 		draw_box() 
 		print(sub(d,1,flr(d_tick+6/3)),8,107)
 		d_tick+=1
-		if d_tick > 90 and input == false then
-			show = false
+		if d_tick > 90 then
+			show = f
 			d = ""
 			d_tick = 0
 		end
@@ -313,7 +359,7 @@ function draw_dia()
 end 
 
 function draw_box()
-	
+	palt(0,f)
 	for i=8, 112,8 do
 	 for j=112, 128,8 do 
 			spr(139,i,104)
@@ -335,6 +381,61 @@ function draw_box()
 
 end 
 
+
+--
+-- menu stuff !!! 
+--   
+menu1 = "placeholder" 
+menu2 = "placeholder"
+
+function draw_menu() 
+	txt = "" 
+	t1 = menu1
+	t2 = menu2
+	
+	if select == 1 then
+		t1 = "➡️"..sub(t1,1)
+	elseif select == 2 then 
+		t2 = "➡️"..sub(t2,1)
+	end
+	
+	print(txt,16,108) 
+	print(t1,16,112)
+	print(t2,80,112)
+end
+
+-- use the selection menu for 
+-- our dialog
+function use_menu()	
+	if btn(0) then
+		if not (select % 2 == 1) then
+			select-=1
+		end
+	elseif btn(1) then
+		if not (select % 2 == 0) then
+			select +=1
+		end 
+	elseif btnp(5) then
+	 selected = true
+		selection = select
+	end
+	
+	selection_check()
+end
+
+--checks which one were trying to do
+function selection_check()
+	if selected then
+		selected = false
+		if select == 1 then 
+		 -- nothing yet  
+		else 
+   -- nothing yet  
+		end 
+	end 
+end 
+
+-- 
 -->8
 -- update & draw
 
@@ -349,10 +450,7 @@ function _update()
 	if btn(5) then 
 		trigger()
 	end 
-	
-	if btn(4) then 
-		menu()
-	end 
+
 	
 end  
 
@@ -363,38 +461,37 @@ end
 function _draw()
 	cls(3)
 	
-	
-	for i in all(rm.tiles) do
-		
-		if fget(i.s, 7) then 
-			palt(0, f)
-			palt(3, t)
-			spr(i.s,i.x*8,i.y*8)
-		else 
-			palt(0,t)
-			spr(i.s,i.x*8,i.y*8)
-		end
-		
+	for i in all(rm.tiles) do 
+		npalt(i.s)
+		spr(i.s,i.x*8,i.y*8)	
 	end 
 	
-	palt(0,f)
-	
-	draw_bar()
-	draw_dia()
-	
-	palt(0,f)
-	palt(3, t)
-	
-	
-	
+	if pr == t then 
+		print(counter,64, 16,7)
+	end 
 	--plr
 	spr(64,plr.x,plr.y)
 	spr(box.sp, box.x, box.y)
 	
+	draw_bar()
+	draw_dia()
+	
 	print(map_tile,6,13,7)
 	print("player"..flr(plr.x/8)..","..flr(plr.y/8),5,20)
 	print(grid_x..","..grid_y,5,5,7)
+ 
 end
+
+--function to change color
+function npalt(s)
+	if fget(s, 7) then
+		palt(0, f)
+		palt(3, t)
+	else 
+		palt(0,t)
+	end 
+end 
+
 -->8
 -- player functions 
 
@@ -405,6 +502,11 @@ function move_plr()
 			plr.move = "l"
 			plr.moving = t
 			aim("l") 
+			
+		if collide_map(plr,0) then
+			plr.x +=1
+		end
+		
 	end
 	
 	if (btn(1)) then 
@@ -412,6 +514,11 @@ function move_plr()
 		plr.move = "r"
 		plr.moving = t
 		aim("r")
+		
+		if collide_map(plr,0) then
+			plr.x -=1
+		end
+		
 	end 
 	
 	if (btn(2)) then 
@@ -419,6 +526,11 @@ function move_plr()
 		plr.move = "u"
 		plr.moving = t
 		aim("u")
+		
+		if collide_map(plr,0) then
+			plr.y +=1
+		end
+		
 	end 
 	
 	if (btn(3)) then 
@@ -426,6 +538,11 @@ function move_plr()
 		plr.move = "d"
 		plr.moving = t
 		aim("d")
+		
+		if collide_map(plr,0) then
+			plr.y -=1
+		end
+		
 	end 
 	 
 end
@@ -446,12 +563,19 @@ function aim(b)
 	end
 end
 
-function draw_bar()
-	
-	for i = 4, 12 do 
+function draw_bar() 
+ 
+	for i = 4, 12 do
+		npalt(113) 
 		spr(113,i*8,120)
 	end 
 	
+	local j = 4 
+	for i in all(plr.inven) do 
+		npalt(i.sp)
+		spr(i.sp,j*8,120)
+		j+=1
+	end 
 end 
 __gfx__
 0000000000000000000b000000000000000000bbbbbb1000bbbbbbbb000000000000b00b42000024000000000000000033333333000001110011100000000000
@@ -488,7 +612,7 @@ ee22ee00014422100bb0b00001bbbb1111bbbb1100ffe00000000000422024444220244400002244
 0eeee00000142100000b0000001111100111111000fe000000000000000002400000024000000021002000000000700700000000155155510c666c0000000000
 33383833333838333338383333383833333333373333333333360333b000000b0000000b000bbbbb00bbbb333333333333333333cc666ccc0080000000080000
 338888833388888333888883338888833333337773333333337660331bbbbbb10000000b0000bbbbbbbb33303333333333333333cc666ccc0009800000898000
-3380f0833380f0833388888333888883333337777633333333726033411111210000000b0000b3333b3300003333377733333333cc666ccc0089800000898000
+3381f1833381f1833388888333888883333337777633333333726033411111210000000b0000b3333b3300003333377733333333cc666ccc0089800000898000
 338fff83338fff833388888333888883333337776663333337422203424444210000000b00bb33bb334000003333777737777733cc666ccc0088800000888000
 3388888333f888833388888333888883333377746660333334446223244242410000000b0bb3bbbb344400003377777777777733cc666ccc0024200000242000
 33fd8df3338d8d833388888333888883333377744666333334442220444444420000000bbbbbb00bb34240003377777777777603cc666ccc0024200000242000
@@ -535,18 +659,5 @@ b144441bb1424411b14444410000000000000000000000000000000022277ccc00000000ccccc742
 b144441b00111144111141000000000000000000000000000000000024277ccc00000000ccc77242370000000000000000000000000000000000000000000000
 b1444410b01bbb110bbb1b0b000000000000000000000000000000002467cccc00000000cccc7642370000000000000000000000000000000000000000000000
 __gff__
-0000010001010100000001018001010081000083010101000001010100010103010101038100008181010101000100010300010101030301010101010101010300000000000000010001010000000000000000000000000100000100000000000000000000000001010101010000000000010000000000010101000000000000
-0000000000000001010100000000000000000000000000010001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-__map__
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000040500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000141500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000001000101010000010101c101010081000083010101000001010100010103010101038100008181010101000100010300010101430301010101010101010300000000000000010001010000000000000000000000000100000100000000000000000000000001010101010000000000810000000000010101000000000000
+0000000000000001010180800000000000000000000000010001800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
