@@ -69,7 +69,6 @@ end
 function spawn(rtype) 
 	 
 	--defaults
-	beach,cave,house,forest,town = f,f,f,f,f
 	rx,ry = 15,15
  xlim,ylim,num=1,1,8  
 	
@@ -79,18 +78,15 @@ function spawn(rtype)
 	
 	rm.type = rtype
 	rm.max_goal = 1 
-	--rm.type = "cave"
 	
 	--room cleared is if the room is finished.
 	-- can pass is if character can go to the next room
 	rm.roomcleared = f
-	rm.canpass = f   
- 
-	lvl = lvl+1
+	rm.canpass = f	--quest variables
+	rm.gettrash = f
+	
 	
 	if rm.type == "forest" then 
-		
-		forest = t
 		  
 		rm.max_goal = 3
 		--potential items to be spawned
@@ -113,12 +109,15 @@ function spawn(rtype)
 	--beach 
 	elseif rm.type == "beach" then
 		
-		num,ry,beach,lim = 9,10,t,4
+		num,ry,beach,lim = 9,10,4
 		
 		rm.c = 15 
 		
 		plr.x = 58 
 		plr.y = 0
+		
+		px = 8
+ 	py = 5 
 		
 		--trash quest counter
 		rm.trashcount = 0
@@ -133,7 +132,7 @@ function spawn(rtype)
 	
 	elseif rm.type == "cave" then 
 	 
-	 cave,xlim,ylim,ry,rx = t,3,3,13,13
+	 xlim,ylim,ry,rx = 3,3,13,13
  	
  	rm.c = 0
  	
@@ -144,11 +143,9 @@ function spawn(rtype)
 		rm.pot_elms = {28,36}
 		
 		rm.pot_goals = {31}
-		rm.pot_exits = {}
+		rm.pot_exits = {132,84}
  	
 	elseif rm.type == "town" then 
-		
-		town = t 
 	
 		plr.x = 64
 		plr.y = 11
@@ -160,8 +157,6 @@ function spawn(rtype)
 		rm.pot_elms = {} 
 		rm.pot_exits = {132}  
 	end 
-	
-	rm.tiles = {} 
 	
 	setxy()
 	
@@ -187,10 +182,7 @@ function gen_room()
  	
  	add(rm.tiles,temp)
  	add(rm.tiles,temp2) 
-	end  
-	
-	--quest variables
-	rm.gettrash = f 
+	end   
 	
 	--build the goals and exits 
 	rm.num_goals = flr(rnd(rm.max_goal)+1)
@@ -212,122 +204,115 @@ function gen_room()
 		add(rm.exits, ex)
 	end 
 	
-	--janky
-	if beach then
- 	px = 8
- 	py = 5 
- end  
-	
 	--places tiles randomly 	  
 	for i = xlim, rx-1 do 
 		for j = ylim, ry-1 do 
 		 
 		 if not checkoccupied(i,j) then 
-		 
-			--pick a random element
-			rand_elm = rm.pot_elms[flr(rnd(#rm.pot_elms)+1)]
-			temp = {}
+				--pick a random element
+				rand_elm = rm.pot_elms[flr(rnd(#rm.pot_elms)+1)]
+				temp = {}
 				
-			temp.x = i
-			temp.y = j
-			temp.s = 0
+				--temp
+				temp.x = i
+				temp.y = j
+				temp.s = 0
 			
-			--add start point 
-			if i == px and j == py then
-				if rm.type == "forest" then
-					temp.s = 131
-				end
-			elseif cave and i == px and j == py-1 then
-				temp.s = 159 
-			elseif rnd(10)+1 > num then
+				--add start point 
+				if i == px and j == py then
+					if rm.type == "forest" then
+						temp.s = 131
+					elseif rm.type=="cave" and i == px and j == py-1 then
+						temp.s = 159 
+					end 
+				--random elem
+				elseif rnd(10)+1 > num then
 				
-				temp.s = rand_elm
-				temp.path = f
-				
-				--if palm tree
-				if temp.s == 89 then
+					temp.s = rand_elm
+					temp.path = f
+					
+					
+					--tree and other stuff
+					--if palm tree
+					if temp.s == 89 then
 						placenext(i,j,90,73,74,89)
 						if cplace then 
 							temp.s = 0 
 						end  
-				
-				--if its a regular tree or fern tree
-				elseif temp.s == 20 or temp.s == 57 then
+					--if its a regular tree or fern tree
+					elseif temp.s == 20 or temp.s == 57 then
 						placenext(i,j,21,4,5,20)
 						if cplace then 
 							temp.s = 0 
 						end
-				elseif temp.s == 116 then
-					
-					--trigger trash quest
-					--for little quest
-					rm.trashtrigger = t
-					rm.trashcount += 1
-					--quest trigger    
-				end 
+					elseif temp.s == 116 then
+						--trigger trash quest
+						--for little quest
+						rm.trashtrigger = t
+						rm.trashcount += 1
+						--quest trigger    
+					end 
 					 
 				--add our goals
-			elseif rnd(10)+1 < 4 and cgoal < rm.max_goal and i > 2 and j > 3  then 
-				temp.s = rm.goals[cgoal]
-				temp.path = t 
-				cgoal += 1
-					
-			elseif rnd(10)+1 < 4 and cexit < rm.max_exit and i > 3 and j > 4 and j < 14 then
-				temp.s = rm.exits[cexit]
-				temp.path = t
-				cexit += 1
+				elseif rnd(10)+1 < 4 and cgoal < rm.max_goal and i > 2 and j > 3  then 
+					temp.s = rm.goals[cgoal]
+					temp.path = t 
+					cgoal += 1
 				
-				--next room
-				temp.nr = {}
+				--exits	
+				elseif rnd(10)+1 < 4 and cexit < rm.max_exit and i > 3 and j > 4 and j < 14 then
+					temp.s = rm.exits[cexit]
+					temp.path = t
+					cexit += 1
 				
-				--add a house
-				if temp.s == 26 then
-					placenext(i,j,27,10,11,26)
-						
-					addon(i,j,17)
-				elseif temp.s == 9 then 
-					temp.y = 3
-						
-					--prevent overlap 
-					if i == 7 or i == 8 then 
-						temp.x = 6
-					end 
-						
+					--next room
+					temp.nr = {}
+				
+					--add a house
+					if temp.s == 26 then
+						placenext(i,j,27,10,11,26)
+						addon(i,j,17)
+					elseif temp.s == 9 then 
+						temp.y = 3
+						--prevent overlap 
+						if i == 7 or i == 8 then 
+							temp.x = 6
+						end 
 					addon(i,temp.y,17)
 					
-				--dirt exit
-				elseif temp.s == 132 then 
+					--dirt exit
+					elseif temp.s == 132 then 
 					
-					positionsx = {7,15}
-					temp.x = positionsx[flr(rnd(#positionsx))+1]
+						positionsx = {7,15}
+						temp.x = positionsx[flr(rnd(#positionsx))+1]
 					
-					--determine y 
-					if temp.x == 7 then 
-						temp.y = 0 
-					elseif temp.x == 15 then 
-						temp.y = 7 
-					end 
-					 
-				end 
-					
-			end 
-		
-			if temp.s != 0 then
-				s1 = s1..temp.x.." "
-				add(rm.tiles,temp)
-				
-				for i in all(rm.tiles) do
-					m = m..i.x
-				end 
-		
-				n = #rm.tiles
-			end
+						--determine y 
+						if temp.x == 7 then 
+							temp.y = 0 
+						elseif temp.x == 15 then 
+							temp.y = 7 
+						end  
+					end --end temp
+							
+				end--end elseif  
 			
-			--end if 
+				--if s isnt 0 
+				if temp.s != 0 then
+					s1 = s1..temp.x.." "
+					add(rm.tiles,temp)
+				
+					for i in all(rm.tiles) do
+						m = i.x
+					end 
+		
+					n = #rm.tiles
+				end
+			
+			--end if occupied 
 			end  
 			
-		end 
-	end  
+		end --end j 
+	end -- end i  
 	
 	--if no path regen 
 	for i in all(rm.tiles) do
@@ -407,6 +392,7 @@ end
 function placenext(i,j,s1,s2,s3,sp) 
 	
 	cplace = f 
+	
 	if not checkoccupied(i+1,j) 
 	and not checkoccupied(i,j-1) 
 	and not checkoccupied(i,j-1)
