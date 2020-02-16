@@ -52,74 +52,82 @@ end
 function roomsetup()
 	
 	rooms = {}
+	world = {}
 	
-	--nextrooms stores the types of rooms to generate
-	--to gen is the sprites to generate
-	nextrooms = {} 
-	togen = {} 
+	lvl = 0 -- keeps track of where the player is
+	pr = 0 -- keeps track so we can access our rooms
+	roomtracker = 1 
 	
 	rm = {
 		max_goal = 3,
 		max_exit = 2,
-	} 
-
-	lvl = 0 -- keeps track of where the player is
-	roomtracker = 0 -- keeps track so we can access our rooms
-	
+	}
 end 
 -->8
 -- gen
 
-function spawn(rtype) 
-	 
-	--defaults
-	beach,cave,house,forest,town = f,f,f,f,f
-	rx,ry = 15,15
-	c,xlim,ylim,num=3,1,1,8  
+function spawn(rtype,tl) 
 	
+	--up level
+	lvl += 1 
+	
+	--defaults
+	rx,ry = 15,15
+ xlim,ylim,num=1,1,8  
+	
+	rm.c = 3 
 	--set sprite of char
 	psp = 64
 	
 	rm.type = rtype
 	rm.max_goal = 1 
-	--rm.type = "cave"
 	
 	--room cleared is if the room is finished.
 	-- can pass is if character can go to the next room
 	rm.roomcleared = f
-	rm.canpass = f   
- 
-	lvl = lvl+1
+	rm.canpass = f	--quest variables
+	rm.gettrash = f
+	
 	
 	if rm.type == "forest" then 
-		
-		forest = t
 		  
-		rm.max_goal = 2
+		rm.max_goal = 3
 		--potential items to be spawned
 		rm.pot_elms = {1,2,3,16,
 		17,18,36,50,51,20,52}
 		
 		--goals and exits 
 		rm.pot_goals = {53,54,55,35,19}
+		rm.entrances = {132} 
 		
 		if tograndma then 
 			rm.pot_exits = {26}
 			plr.x = 8
 			plr.y = 8
+			
+			px = 1
+			px = 1 
 		else 
 			rm.pot_exits = {132}
-			plr.x = 112
+			plr.x = 120
 			plr.y = 56
+			
+			px = 14
+			py = 7
 		end  
 	
 	--beach 
 	elseif rm.type == "beach" then
 		
-		num,ry,beach,c,lim = 9,10,t,15,4
+		num,ry,beach,lim = 9,10,4
+		
+		rm.c = 15 
 		
 		plr.x = 58 
 		plr.y = 0
+		
+		px = 8
+ 	py = 5 
 		
 		--trash quest counter
 		rm.trashcount = 0
@@ -131,23 +139,40 @@ function spawn(rtype)
 		rm.pot_goals = {15,48,54,63,94,
 		37}
 		rm.pot_exits = {9}
+		rm.entrance = {132}
 	
 	elseif rm.type == "cave" then 
 	 
-	 cave,c,xlim,ylim,ry,rx = t,0,3,3,13,13
- 
-	 plr.x = 56
-		plr.y = 104 
+	 xlim,ylim,ry,rx = 3,3,13,13
+ 	
+ 	rm.c = 0
 		
 	 rm.max_exit = 0 
 		rm.pot_elms = {28,36}
 		
+		--caves only have goals 
+		--and entrances
 		rm.pot_goals = {31}
-		rm.pot_exits = {}
- 	
-	elseif rm.type == "town" then 
 		
-		town = t 
+		--if tl is 9 
+		if map_tile == 9 then 
+			rm.entrances = {132}
+			plr.x = 56
+			plr.y = 104 
+			
+			px = 7
+			py = 12 
+			
+		else 
+			rm.entrances = {84}
+			plr.x = 72
+			plr.y = 72 
+			
+			px = 9
+			px = 10 
+		end 
+		
+	elseif rm.type == "town" then 
 	
 		plr.x = 64
 		plr.y = 11
@@ -157,12 +182,19 @@ function spawn(rtype)
 		
 		rm.pot_goals = {55,114} 
 		rm.pot_elms = {} 
-		rm.pot_exits = {132}  
+		
+		rm.pot_exits = {132}
+		rm.entrances = {132}  
 	end 
 	
-	setxy()
+	--setxy()
 	
 end
+
+s1= ""
+m="" 
+m2 = ""
+n = "" 
 
 -- generate the room
 -- tiles, exits, and goals 
@@ -170,20 +202,22 @@ function gen_room()
 	
 	rm.tiles = {}
 	
-	if cave then 
+	addentrances() 
+	
+	if rm.type == "cave" then 
 		--add torches randomly
 		crng = flr(rnd(5)) + 4 
 		crng2 = flr(rnd(7)) + 6
 		
 		temp = {x=crng,y=2,s=78}
 		temp2 = {x=crng2,y=2,s=78}
- 	
+ 
  	add(rm.tiles,temp)
- 	add(rm.tiles,temp2) 
+ 	add(rm.tiles,temp2)
+ 
 	end  
 	
-	--quest variables
-	rm.gettrash = f 
+	 
 	
 	--build the goals and exits 
 	rm.num_goals = flr(rnd(rm.max_goal)+1)
@@ -206,7 +240,7 @@ function gen_room()
 	end 
 	
 	--janky
-	if beach then
+	if rm.type=="beach" then
  	px = 8
  	py = 5 
  end 
@@ -227,11 +261,7 @@ function gen_room()
 			
 			--add start point 
 			if i == px and j == py then
-				if rm.type == "forest" then
-					temp.s = 131
-				end
-			elseif cave and i == px and j == py-1 then
-				temp.s = 159 
+					temp.s = 148
 			elseif rnd(10)+1 > num then
 				
 				temp.s = rand_elm
@@ -269,7 +299,12 @@ function gen_room()
 				temp.s = rm.exits[cexit]
 				temp.path = t
 				cexit += 1
-					
+				
+				--next room number
+				temp.nr = nil
+				temp.ex = t 
+				temp.cr = lvl
+				 
 				--add a house
 				if temp.s == 26 then
 					placenext(i,j,27,10,11,26)
@@ -321,9 +356,33 @@ function gen_room()
   end
  end
 	
-	add(rooms,rm)
-	--set the map 
-	setitems(rm.tiles)
+	--save the room
+	add(rooms,rm) 
+	setitems(rm.tiles) 
+end
+
+--add entrance
+function addentrances()
+	
+	temp = {} 
+	temp.ent = t 
+	
+	if rm.type == "cave" then 
+		temp.s = rm.entrances[1] 
+		temp.pr = nil
+		
+		if temp.s == 132 then
+			temp.x = 7
+			temp.y = 13
+		else
+			temp.x = 9
+			temp.y = 8 
+		end
+ 	
+ 	add(rm.tiles,temp)
+	end 
+	
+	
 end
 
 --deletes the map being printed
@@ -353,7 +412,6 @@ function delelem(x,y,til,rsp)
 			del(til,i)
 		end
 	end 
-	
 	mset(x,y, rsp)
 end 
 
@@ -376,6 +434,7 @@ end
 function placenext(i,j,s1,s2,s3,sp) 
 	
 	cplace = f 
+	
 	if not checkoccupied(i+1,j) 
 	and not checkoccupied(i,j-1) 
 	and not checkoccupied(i,j-1)
@@ -802,9 +861,10 @@ end
 -->8
 -- update & draw
 
-function _update()
+function _update() 
 	
-	tick += 1 
+	--quest trigger tick
+	tick += 1
 	 
 	if state == 0 then 
 		if btnp(4) then 
@@ -812,7 +872,7 @@ function _update()
 		end	
 	
 	elseif state == 1 then  
-		 
+		  
 		plr.moving = f
 		move_plr() 
 		 
@@ -828,9 +888,9 @@ function _update()
 		
 		quests()
 	
+	--if diagloge 
 	elseif state == 2 then 
 		plr.moving = f 
-		
 	end
 	
 	dtb_update()  
@@ -842,88 +902,25 @@ function _draw()
 	
 	cls(0)
 	
-	
 	if state == 0 then 
 		intro()
-		print(m,64,64)
 	else 
 
-	
 	--offsets
 	offsetx = 0
 	offsety = 0
 	
-	cls(c)
-	if house then
-		map(16,0,0,0,16,16)
-		npalt(62)
-		
-		--offsets
-		offsetx = 16 
-		offsety = 0
-		
-		spr(62,48,48)
-		mset(6,6,62)
-	else
-		--beach background 
-		if beach then
-		
-			offsetx = 32 
-			offsety = 0
-		 
-			npalt(0)
-			map(32,0,0,0,16,16)
-			
-			
-		elseif cave then
-			
-			offsetx = 48
-			offsety = 0
-			 
-			npalt(0)
-			map(48,0,0,0,16,16)
-		elseif forest then 
-		
-			offsetx = 0
-			offsety = 16
-			
-			npalt(0)
-			map(0,16,0,0,16,16)
-		elseif town then
-		
-			offsetx = 64
-			offsety = 0 
- 
-			npalt(0) 
-			map(64,0,0,0,16,16) 
-		end
-		
-		for i in all(rm.tiles) do 
-			
-			npalt(i.s)			
-	 	
-	 	if i.s == 55 then
-	 		anim(i,55,2,1,f,t)
-	 		
-			elseif i.s == 78 then
-	 		anim(i,78,2,1,f,t)
-			else
-	 		spr(i.s,i.x*8,i.y*8)
-			end 
-		end
-		
-		if forest then 
-			npalt(0)
-			map(0,17,0,8,16,16)
-		end 
-	 
-	end 
+	--display current room 
+	displayroom()
 	
+	
+	print(map_tile)
+	print(m)
 	npalt(64)
+	
 	if plr.moving then 
 		
 		eflp,sf,sp,nf = f,81,6,2
-		 
 		if plr.move == "l" then 
 			eflp = t
 		elseif plr.move =="u" then 
@@ -945,15 +942,9 @@ function _draw()
 	end 
 	
 	spr(box.sp, box.x, box.y)
-	
-	print(m,64,64)
 	draw_bar()
-
 	dtb_draw()
 	
-	print(map_tile,6,13,7)
-	print("player"..flr(plr.x/8)..","..flr(plr.y/8),5,20)
-	print(grid_x..","..grid_y,5,5,7)
 	end 
 end
 
@@ -987,6 +978,77 @@ function draw_bar()
 		spr(i.sp,j*8,120)
 		j+=1
 	end 
+end 
+
+--display the current room
+function displayroom()  
+	
+	cls(croom.c)
+	
+	if croom.type == "house" then
+		map(16,0,0,0,16,16)
+		npalt(62)
+		
+		--offsets
+		offsetx = 16 
+		offsety = 0
+		
+		spr(62,48,48)
+		mset(6,6,62)
+	else
+		--beach background 
+		if croom.type == "beach" then
+		
+			offsetx = 32 
+			offsety = 0
+		 
+			npalt(0)
+			map(32,0,0,0,16,16)
+			
+			
+		elseif croom.type == "cave" then
+			
+			offsetx = 48
+			offsety = 0
+			 
+			npalt(0)
+			map(48,0,0,0,16,16)
+		elseif croom.type == "forest" then 
+		
+			offsetx = 0
+			offsety = 16
+			
+			npalt(0)
+			map(0,16,0,0,16,16)
+		elseif croom.type == "town" then
+		
+			offsetx = 64
+			offsety = 0 
+ 
+			npalt(0) 
+			map(64,0,0,0,16,16) 
+		end
+		
+		for i in all(croom.tiles) do 
+			
+			npalt(i.s)			
+	 	
+	 	if i.s == 55 then
+	 		anim(i,55,2,1,f,t)
+	 		
+			elseif i.s == 78 then
+	 		anim(i,78,2,1,f,t)
+			else
+	 		spr(i.s,i.x*8,i.y*8)
+			end 
+		end
+		
+		if rm.type == "forest" then 
+			npalt(0)
+			map(0,17,0,8,16,16)
+		end 
+	end 
+	 
 end 
 -->8
 -- player functions 
@@ -1074,27 +1136,28 @@ end
 
 function trigger()
 	
+	--gets the exit or entrance
+	mye = gettile(croom)
+	
 	if fget(map_tile,1) and map_tile != 116 then 
 		getitem(map_tile)
 	elseif map_tile == 116 then 
-		pickuptrash(grid_x,grid_y,rm.tiles) 	
-	elseif map_tile ==12  then
-		delmap(rm.tiles)
-		spawn("cave")
-		gen_room()
-	elseif map_tile == 26 then 
-		delmap(rm.tiles)
-		house = t
-		plr.x = 56
-		plr.y = 88 
-		c = 0
-	elseif map_tile == 62 then
-		d = "hello!"
-		show = t
+		pickuptrash(grid_x,grid_y,croom.tiles) 	
+	
+	elseif map_tile == 132 then 
+		 
+		moverooms(rm)
+		 
 	elseif map_tile == 9 then 
-		delmap(rm.tiles)
-		spawn("cave")
-		gen_room()
+		
+		
+		if  mye.nr == nil and mye.pr == nil then 
+			generateroom(rooms[lvl],"cave",9)
+		else
+			moverooms(rm) 
+		end  
+	
+	--found a chest 
 	elseif map_tile == 37 then 
 		dtb_disp("a chest! wonder what's inside?")
 		
@@ -1133,6 +1196,8 @@ function intro()
 		if choice != nil then 
 			spawn(choice) 
 			gen_room()
+			
+			croom = rooms[roomtracker]
 			state = 1 
 		end 
 		
@@ -1156,7 +1221,7 @@ end
 
 function quests()
 	
-	qtriggers(rm.tiles)
+	qtriggers(croom.tiles)
 	
 	if tick % 100 == 1 then
 	
@@ -1165,7 +1230,6 @@ function quests()
 			dtb_disp("look at all this trash!\n gross!")
 	  dtb_disp("let's clean it up before we see grandma." )  
 			
-			m = "made it" 
 			rm.trashtrigger = f 
 		end 
 				
@@ -1203,9 +1267,66 @@ end
 
  
 -->8
--- traversing rooms 
+-- transversing trees 
 
 
+--takes in type,room  
+function generateroom(myroom,rtype)
+	
+	delmap(croom.tiles)
+	
+	--updates current tiles link
+	e = gettile(myroom) 
+	e.nr = lvl+1 
+	
+	--creates the next room 
+	spawn(rtype)
+	gen_room()
+	
+	--updates entrance 
+	en = getentrance(rooms[lvl]) 
+	en.pr = e.cr
+	
+	
+end 
+
+function moverooms(rm)
+	
+	--clears the map
+	delmap(rm.tiles)
+	
+	e = gettile(rm)
+	
+	if e.ent then 
+		roomtracker = e.pr 
+	else 
+		roomtracker = n.nr
+	end 
+	
+	croom=rooms[roomtracker]
+	m = croom.type  
+	--sets the current rooms tiles
+	setitems(croom.tiles) 
+	
+end 
+
+--get exit 
+function gettile(myroom)
+	for i in all(myroom.tiles) do 
+		if i.x == grid_x and i.y == grid_y then 
+			return i
+		end 
+	end 	
+end
+
+--get entrance  
+function getentrance(myroom)
+	for i in all(myroom.tiles) do 
+		if i.ent then 
+			return i
+		end 
+	end
+end 
 __gfx__
 0000000000000000000b000000000000000000bbbbbb1000bbbbbbbb000000000000b00b42000024000000000000000033333333000001110011100000000000
 000000000000000000bb0b0000000bb0000bbbbbbbbb3100111111120b0b1bbbbb0000b140000004002222222222220033900933011115651155511100666610
@@ -1274,10 +1395,10 @@ cccccccc00000000000000000000000000000000000000b2ccccccc7444444444444444444444444
 b0b1bbb0bb0000b111bbb10b01b0b10b01b4410b3333333733333333024777cc777ccccccc777423373333333333333300002222222000222422000000000000
 0014111111bbbb14441111000001010000444100333333777333333324777cccccccc7cccccc7742707777777777777700244244442222447474220000000000
 11444444441111444444441b4144441b4144441b33333777763333332477cccccccccccccccc7742370000000000000002427776624444266772442000000000
-b14444244444444444444441044444414444444433333777666333332277ccccccccccccccccc74237000000000000000247777c77777777cc777240dddddddd
-b1442444442444444442441b14424410444244443333777466603333247cccc7ccccccccccccc742370000000000000024276cccc77ccc7cccc677420dddddd0
-b1444441444444444444441b144444104444444033337774466633332277ccccccccc7cccccc774237000000000000002777cccccccccccccccc772200dddd00
-1444441b114441111144241b1140241b1144441b3333777446660333247ccccccccccccccccc77423700000000000000447ccccccccccccccccc7742000dd000
+b14444244444444444444441044444414444444433333777666333332277ccccccccccccccccc74237000000000000000247777c77777777cc77724000000000
+b1442444442444444442441b14424410444244443333777466603333247cccc7ccccccccccccc742370000000000000024276cccc77ccc7cccc6774200000000
+b1444441444444444444441b144444104444444033337774466633332277ccccccccc7cccccc774237000000000000002777cccccccccccccccc772200000000
+1444441b114441111144241b1140241b1144441b3333777446660333247ccccccccccccccccc77423700000000000000447ccccccccccccccccc774200000000
 144444100b111b0b0b144410000001040b0441043337774742260333247cccccccccccccccccc7423700000000000000276cccccccccccccccccc64200000000
 1444441b014441b00144444100b111b00000000033374747426223332777cccc00000000ccccc7423700000000000000246cccccccccccccccccc67200000000
 b144441bb1424411b1444441b044441000000000333444444226203322277ccc00000000ccccc74237000000000000002477ccccccccccccccccc74400000000
@@ -1305,7 +1426,7 @@ fffffeff015655115651111001566656665665106566666666656656111151510000000000000000
 ffffffff001111001110000001556666666655106666665655666666551551110000000000000000000000000000000000000000000000000000000000000000
 __gff__
 000001000101010000c10101c101010301000083010101000001410181010103010101038141018181010101000100010300010101430341410101010101010380808080800100010001010000010000808080804100000100000100000003000000000000000001010101010000010080810200028000010101010000000000
-0000000000000001010180800101010000000000000000010001800001010100000101010101010000000000000000000001010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000004040000001010180800101010000000000000000010001800001010100000101010101010000000000000000000001010101010100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 00000000000000000000000000000000000000000000000000000000000000007676767676767676767676767676767600000000000000000000000000000000333434343434393a3334343434343434000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000076767676767676767676767676767676000000000000000000000000000000007676292a76767676760a0b7676767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1321,7 +1442,7 @@ __map__
 00000000000000000000000000000000000000455d5d5d5d5d5d5d5d45000000a05858a0a058585858585858a05858580000b4b7a7a7a7b7b7b7b7a7a7b3000081818181818481818181818181818181000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000045454545555545454545000000202120212021202120212021202120210000b4b7b7a7a7b7a7b7b7b7b7b3000033343434349076760a2d0b7676767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000045454545000000000000565656565656565656565622565656560000b5a2a2a2a3b7b7a1a2a2a2b60000767676767690762e1a3d1b7676127676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000605656665656225656565656606060660000000000000000000000000000000076767612769181818181819376767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000605656665656225656565656606060660000000000000045450000000000000076767612769181818181819376767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000606666565656565666605660565656660000000000000000000000000000000076767676767676767676767676767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0514151415141500001415141514150476767676767676767676767676767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0500000000000000000000000000000476767676767676767676767676767676000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
